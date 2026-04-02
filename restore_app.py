@@ -851,7 +851,16 @@ class App(ctk.CTk):
             fg_color=ACCENT, hover_color=ACCH,
             width=120, height=34, corner_radius=10,
             command=self._toggle_theme)
-        self._theme_btn.grid(row=0, column=3, padx=(8, 18))
+        self._theme_btn.grid(row=0, column=3, padx=(8, 8))
+        
+        # Botón Salir
+        self._exit_btn = ctk.CTkButton(
+            self._header, text="❌ Salir",
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
+            fg_color=DANGER, hover_color="#c0392b", text_color="white",
+            width=80, height=34, corner_radius=10,
+            command=lambda: os._exit(0))
+        self._exit_btn.grid(row=0, column=4, padx=(0, 8))
         
         # Botón Acerca de
         self._about_btn = ctk.CTkButton(
@@ -860,7 +869,7 @@ class App(ctk.CTk):
             fg_color="transparent", hover_color=BG, text_color=TSEC, border_width=1, border_color=BORDER,
             width=100, height=34, corner_radius=10,
             command=self._show_about)
-        self._about_btn.grid(row=0, column=4, padx=(0, 20))
+        self._about_btn.grid(row=0, column=5, padx=(0, 20))
 
     def _build_tabs(self):
         tb = ctk.CTkFrame(self, fg_color=CARD2, corner_radius=0, height=46)
