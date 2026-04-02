@@ -1257,7 +1257,10 @@ class App(ctk.CTk):
         try:
             key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
             name = "RestoreGuardPro"
-            cmd = f'"{sys.executable}" "{Path(__file__).resolve()}"'
+            if getattr(sys, 'frozen', False):
+                cmd = f'"{sys.executable}"'
+            else:
+                cmd = f'"{sys.executable}" "{Path(__file__).resolve()}"'
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as k:
                 if enable: winreg.SetValueEx(k, name, 0, winreg.REG_SZ, cmd)
                 else:
