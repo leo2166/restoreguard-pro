@@ -801,7 +801,7 @@ class App(ctk.CTk):
         apply_theme("dark")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
-        self.title("RestoreGuard Pro")
+        self.title("RestoreGuard Pro v1.0.0 - Ing. Lucidio Fuenmayor")
         self.geometry("860x700")
         self.minsize(720, 580)
         self.configure(fg_color=BG)
@@ -840,7 +840,7 @@ class App(ctk.CTk):
         lbl(self._header, "🛡️", 34).grid(row=0, column=0, padx=(18,6), pady=16)
         tf = ctk.CTkFrame(self._header, fg_color="transparent")
         tf.grid(row=0, column=1, sticky="w")
-        lbl(tf,"RestoreGuard Pro",20,"bold").pack(anchor="w")
+        lbl(tf,"RestoreGuard Pro v1.0.0",20,"bold").pack(anchor="w")
         lbl(tf,"Protección automática real del sistema Windows",11,color=TSEC).pack(anchor="w")
         self._badge = lbl(self._header,"● Activo",12,"bold",SUCCH)
         self._badge.grid(row=0, column=2, padx=20)
@@ -1158,6 +1158,16 @@ class App(ctk.CTk):
               "  • Abre la subcarpeta 'wifi_profiles\\' para leer tus antiguas claves de Wi-Fi.\n"
               "  • Abre 'configuracion_red.txt' o 'ipconfig.txt' para ver tus IP y DNS anteriores.")
         lbl(h2,t2,12,color=TPRI,justify="left").grid(row=0,column=0,sticky="w",padx=20,pady=16)
+
+        h3 = card(sc); h3.grid(row=2,column=0,sticky="ew",padx=20,pady=(10,30))
+        h3.grid_columnconfigure(0, weight=1)
+        lbl(h3,"👨‍💻 Acerca del Desarrollador",14,"bold").grid(row=0,column=0,sticky="w",padx=20,pady=(16,8))
+        
+        t3 = ("RestoreGuard Pro - Versión 1.0.0\n\n"
+              "Autor y Creador Original: Ing. Lucidio Fuenmayor\n"
+              "Licencia: Uso personal protegido.\n\n"
+              "Aplicación diseñada para la protección, mantenimiento y rescate de sistemas Windows.")
+        lbl(h3,t3,12,color=TPRI,justify="left").grid(row=1,column=0,sticky="w",padx=20,pady=(0,16))
 
         return page
 
