@@ -26,14 +26,21 @@ try:
 except: TRAY_OK = False
 
 # ─────────────────────────────────────────────────────────────────
-# RUTAS Y CONSTANTES
+# RUTAS Y CONSTANTES ─ DETECCIÓN AUTOMÁTICA (UNIVERSAL)
 # ─────────────────────────────────────────────────────────────────
-BASE_DIR     = Path(r"C:\Users\Lucidio\Documents\crear punto")
-BACKUP_D     = Path(r"D:\punto de restauración")
+APP_NAME     = "RestoreGuard Pro"
+PREFIX       = "RestoreGuard"
+
+# Carpeta principal en C: → funciona para cualquier usuario de Windows
+BASE_DIR     = Path.home() / APP_NAME
 CONFIG_FILE  = BASE_DIR / "config.json"
 HISTORY_FILE = BASE_DIR / "historial.json"
 LOG_FILE     = BASE_DIR / "restore_log.txt"
-PREFIX       = "RestoreGuard"
+
+# Disco D: → se detecta automáticamente. Si no existe se usa carpeta en C:
+_DRIVE_D = Path("D:/")
+HAS_DRIVE_D  = _DRIVE_D.exists()
+BACKUP_D     = _DRIVE_D / APP_NAME if HAS_DRIVE_D else BASE_DIR / "respaldo_secundario"
 
 DEFAULT_CFG = {
     "auto_time": "08:00",
@@ -968,7 +975,8 @@ class App(ctk.CTk):
             ).grid(row=0,column=0,sticky="w",padx=20,pady=(16,8))
         self._loc_c = self._loc_row(lc,"💾 Disco C:",str(BASE_DIR),1)
         cfg = load_config()
-        self._loc_d = self._loc_row(lc,"💿 Disco D:",cfg.get("backup_path_d",str(BACKUP_D)),2)
+        d_label = "💿 Disco D:" if HAS_DRIVE_D else "💿 Disco D: (no disponible → usando C:)"
+        self._loc_d = self._loc_row(lc, d_label, cfg.get("backup_path_d",str(BACKUP_D)), 2, is_d=True)
         ctk.CTkLabel(lc,text="").grid(row=3,column=0,pady=6)
 
         # Actividad reciente
@@ -991,14 +999,20 @@ class App(ctk.CTk):
         v.grid(row=1,column=0,padx=16,pady=(0,14))
         return v
 
-    def _loc_row(self, parent, label, path, row):
+    def _loc_row(self, parent, label, path, row, is_d=False):
         f = ctk.CTkFrame(parent, fg_color=CARD2, corner_radius=8)
         f.grid(row=row,column=0,sticky="ew",padx=16,pady=3)
         f.grid_columnconfigure(1, weight=1)
         lbl(f,label,12,"bold").grid(row=0,column=0,padx=12,pady=10,sticky="w")
         lbl(f,path,10,color=TSEC).grid(row=0,column=1,padx=8,pady=10,sticky="w")
-        ex = Path(path).exists()
-        s = lbl(f,"✅ OK" if ex else "⚠️ No existe",11,"bold",SUCCH if ex else WARN)
+        if is_d and not HAS_DRIVE_D:
+            status_txt = "ℹ️ No disponible (usando C:)"
+            status_col = ACCENT
+        else:
+            ex = Path(path).exists()
+            status_txt = "✅ OK" if ex else "⚠️ No existe"
+            status_col = SUCCH if ex else WARN
+        s = lbl(f, status_txt, 11, "bold", status_col)
         s.grid(row=0,column=2,padx=12,pady=10)
         return s
 
