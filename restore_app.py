@@ -801,7 +801,7 @@ class App(ctk.CTk):
         apply_theme("dark")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
-        self.title("RestoreGuard Pro v1.0.0 - Ing. Lucidio Fuenmayor")
+        self.title("RestoreGuard Pro v1.0.0")
         self.geometry("860x700")
         self.minsize(720, 580)
         self.configure(fg_color=BG)
@@ -852,6 +852,15 @@ class App(ctk.CTk):
             width=120, height=34, corner_radius=10,
             command=self._toggle_theme)
         self._theme_btn.grid(row=0, column=3, padx=(8, 18))
+        
+        # Botón Acerca de
+        self._about_btn = ctk.CTkButton(
+            self._header, text="💡 Acerca de",
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
+            fg_color="transparent", hover_color=BG, text_color=TSEC, border_width=1, border_color=BORDER,
+            width=100, height=34, corner_radius=10,
+            command=self._show_about)
+        self._about_btn.grid(row=0, column=4, padx=(0, 20))
 
     def _build_tabs(self):
         tb = ctk.CTkFrame(self, fg_color=CARD2, corner_radius=0, height=46)
@@ -912,6 +921,31 @@ class App(ctk.CTk):
             self._theme_btn.configure(
                 text="☀️  Modo Claro",
                 fg_color=ACCENT, hover_color=ACCH)
+
+    def _show_about(self):
+        t = ctk.CTkToplevel(self)
+        t.title("Acerca de RestoreGuard Pro")
+        t.geometry("450x280")
+        t.resizable(False, False)
+        t.configure(fg_color=BG)
+        t.attributes("-topmost", True)
+        
+        # Centrar ventana
+        t.update_idletasks()
+        px = self.winfo_x() + self.winfo_width()//2 - 225
+        py = self.winfo_y() + self.winfo_height()//2 - 140
+        t.geometry(f"+{px}+{py}")
+        
+        c = card(t)
+        c.pack(fill="both", expand=True, padx=20, pady=20)
+        lbl(c, "🛡️ RestoreGuard Pro v1.0.0", 16, "bold", ACCENT).pack(pady=(20, 10))
+        
+        info = ("Autor y Creador Original: Ing. Lucidio Fuenmayor\n\n"
+              "Licencia: Uso personal protegido.\n\n"
+              "Aplicación diseñada para la protección, mantenimiento\ny rescate seguro de sistemas Windows.")
+        lbl(c, info, 12, color=TPRI, justify="center").pack(pady=10)
+        
+        ctk.CTkButton(c, text="Cerrar", width=120, fg_color=CARD2, hover_color=BORDER, text_color=TPRI, command=t.destroy).pack(pady=(10, 20))
 
     # ── INICIO ────────────────────────────────────────────────────
     def _page_inicio(self):
@@ -1158,16 +1192,6 @@ class App(ctk.CTk):
               "  • Abre la subcarpeta 'wifi_profiles\\' para leer tus antiguas claves de Wi-Fi.\n"
               "  • Abre 'configuracion_red.txt' o 'ipconfig.txt' para ver tus IP y DNS anteriores.")
         lbl(h2,t2,12,color=TPRI,justify="left").grid(row=0,column=0,sticky="w",padx=20,pady=16)
-
-        h3 = card(sc); h3.grid(row=2,column=0,sticky="ew",padx=20,pady=(10,30))
-        h3.grid_columnconfigure(0, weight=1)
-        lbl(h3,"👨‍💻 Acerca del Desarrollador",14,"bold").grid(row=0,column=0,sticky="w",padx=20,pady=(16,8))
-        
-        t3 = ("RestoreGuard Pro - Versión 1.0.0\n\n"
-              "Autor y Creador Original: Ing. Lucidio Fuenmayor\n"
-              "Licencia: Uso personal protegido.\n\n"
-              "Aplicación diseñada para la protección, mantenimiento y rescate de sistemas Windows.")
-        lbl(h3,t3,12,color=TPRI,justify="left").grid(row=1,column=0,sticky="w",padx=20,pady=(0,16))
 
         return page
 
