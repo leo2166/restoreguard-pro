@@ -798,15 +798,15 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         BASE_DIR.mkdir(parents=True, exist_ok=True)
-        apply_theme("dark")
-        ctk.set_appearance_mode("dark")
+        apply_theme("light")
+        ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
         self.title("RestoreGuard Pro v1.0.0")
         self.geometry("860x700")
         self.minsize(720, 580)
         self.configure(fg_color=BG)
         self._creating = False
-        self._theme_name = "dark"
+        self._theme_name = "light"
 
         self._build()
         self.refresh()
@@ -846,9 +846,9 @@ class App(ctk.CTk):
         self._badge.grid(row=0, column=2, padx=20)
         # Botón toggle de tema
         self._theme_btn = ctk.CTkButton(
-            self._header, text="☀️  Modo Claro",
+            self._header, text="🌙  Modo Oscuro",
             font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            fg_color=ACCENT, hover_color=ACCH,
+            fg_color="#1A3EBB", hover_color="#2550D4",
             width=120, height=34, corner_radius=10,
             command=self._toggle_theme)
         self._theme_btn.grid(row=0, column=3, padx=(8, 8))
