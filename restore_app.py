@@ -45,13 +45,67 @@ DEFAULT_CFG = {
 }
 
 # ─────────────────────────────────────────────────────────────────
-# COLORES
+# TEMAS DE COLOR (DARK / LIGHT)
 # ─────────────────────────────────────────────────────────────────
+THEMES = {
+    "dark": {
+        "BG":      "#0D1117",
+        "CARD":    "#161B22",
+        "CARD2":   "#1C2128",
+        "ACCENT":  "#3D7EFF",
+        "ACCH":    "#5A96FF",
+        "SUCCESS": "#238636",
+        "SUCCH":   "#2EA043",
+        "WARN":    "#D29922",
+        "DANGER":  "#DA3633",
+        "TPRI":    "#E6EDF3",
+        "TSEC":    "#8B949E",
+        "BORDER":  "#30363D",
+    },
+    "light": {
+        "BG":      "#F5F7FA",
+        "CARD":    "#FFFFFF",
+        "CARD2":   "#EEF1F6",
+        "ACCENT":  "#1A3EBB",
+        "ACCH":    "#2550D4",
+        "SUCCESS": "#1A7A3C",
+        "SUCCH":   "#22A050",
+        "WARN":    "#FF6B00",
+        "DANGER":  "#CC2200",
+        "TPRI":    "#0D0D0D",
+        "TSEC":    "#555E6E",
+        "BORDER":  "#D0D7E2",
+    },
+}
+
+_current_theme = "dark"
+
+def _T(key):
+    return THEMES[_current_theme][key]
+
+# Aliases dinámicos (retrocompatibilidad)
+class _ThemeProxy:
+    def __getattr__(self, name):
+        return THEMES[_current_theme].get(name, "")
+
+_theme = _ThemeProxy()
+
 BG      = "#0D1117"; CARD    = "#161B22"; CARD2   = "#1C2128"
 ACCENT  = "#3D7EFF"; ACCH    = "#5A96FF"
 SUCCESS = "#238636"; SUCCH   = "#2EA043"
 WARN    = "#D29922"; DANGER  = "#DA3633"
 TPRI    = "#E6EDF3"; TSEC    = "#8B949E"; BORDER  = "#30363D"
+
+def apply_theme(name):
+    """Actualiza las variables globales de color al tema dado."""
+    global _current_theme, BG, CARD, CARD2, ACCENT, ACCH, SUCCESS, SUCCH, WARN, DANGER, TPRI, TSEC, BORDER
+    _current_theme = name
+    t = THEMES[name]
+    BG=t["BG"]; CARD=t["CARD"]; CARD2=t["CARD2"]
+    ACCENT=t["ACCENT"]; ACCH=t["ACCH"]
+    SUCCESS=t["SUCCESS"]; SUCCH=t["SUCCH"]
+    WARN=t["WARN"]; DANGER=t["DANGER"]
+    TPRI=t["TPRI"]; TSEC=t["TSEC"]; BORDER=t["BORDER"]
 
 # ─────────────────────────────────────────────────────────────────
 # ADMIN
@@ -539,7 +593,8 @@ class SchedulerThread(threading.Thread):
 # ─────────────────────────────────────────────────────────────────
 # WIDGETS HELPERS
 # ─────────────────────────────────────────────────────────────────
-def lbl(parent, text, size=12, weight="normal", color=TPRI, **kw):
+def lbl(parent, text, size=12, weight="normal", color=None, **kw):
+    if color is None: color = TPRI
     return ctk.CTkLabel(parent, text=text,
         font=ctk.CTkFont("Segoe UI", size, weight),
         text_color=color, **kw)
@@ -736,6 +791,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         BASE_DIR.mkdir(parents=True, exist_ok=True)
+        apply_theme("dark")
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         self.title("RestoreGuard Pro")
@@ -743,6 +799,7 @@ class App(ctk.CTk):
         self.minsize(720, 580)
         self.configure(fg_color=BG)
         self._creating = False
+        self._theme_name = "dark"
 
         self._build()
         self.refresh()
@@ -769,17 +826,25 @@ class App(ctk.CTk):
         self._switch("inicio")
 
     def _build_header(self):
-        h = ctk.CTkFrame(self, fg_color=CARD, corner_radius=0, height=72)
-        h.grid(row=0, column=0, sticky="ew")
-        h.grid_propagate(False)
-        h.grid_columnconfigure(1, weight=1)
-        lbl(h, "🛡️", 34).grid(row=0, column=0, padx=(18,6), pady=16)
-        tf = ctk.CTkFrame(h, fg_color="transparent")
+        self._header = ctk.CTkFrame(self, fg_color=CARD, corner_radius=0, height=72)
+        self._header.grid(row=0, column=0, sticky="ew")
+        self._header.grid_propagate(False)
+        self._header.grid_columnconfigure(1, weight=1)
+        lbl(self._header, "🛡️", 34).grid(row=0, column=0, padx=(18,6), pady=16)
+        tf = ctk.CTkFrame(self._header, fg_color="transparent")
         tf.grid(row=0, column=1, sticky="w")
         lbl(tf,"RestoreGuard Pro",20,"bold").pack(anchor="w")
         lbl(tf,"Protección automática real del sistema Windows",11,color=TSEC).pack(anchor="w")
-        self._badge = lbl(h,"● Activo",12,"bold",SUCCH)
+        self._badge = lbl(self._header,"● Activo",12,"bold",SUCCH)
         self._badge.grid(row=0, column=2, padx=20)
+        # Botón toggle de tema
+        self._theme_btn = ctk.CTkButton(
+            self._header, text="☀️  Modo Claro",
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
+            fg_color=ACCENT, hover_color=ACCH,
+            width=120, height=34, corner_radius=10,
+            command=self._toggle_theme)
+        self._theme_btn.grid(row=0, column=3, padx=(8, 18))
 
     def _build_tabs(self):
         tb = ctk.CTkFrame(self, fg_color=CARD2, corner_radius=0, height=46)
@@ -811,9 +876,35 @@ class App(ctk.CTk):
     def _switch(self, key):
         for p in self._pages.values(): p.grid_remove()
         self._pages[key].grid(row=0, column=0, sticky="nsew")
+        self._active_tab = key
         for k, b in self._tab_btns.items():
             b.configure(text_color=ACCENT if k==key else TSEC,
                         fg_color=CARD if k==key else "transparent")
+
+    def _toggle_theme(self):
+        """Alterna entre modo oscuro y modo claro y reconstruye la UI."""
+        new_theme = "light" if self._theme_name == "dark" else "dark"
+        self._theme_name = new_theme
+        apply_theme(new_theme)
+        ctk.set_appearance_mode("light" if new_theme == "light" else "dark")
+        self.configure(fg_color=BG)
+        # Reconstruir toda la UI con los nuevos colores
+        active = getattr(self, "_active_tab", "inicio")
+        for widget in self.winfo_children():
+            widget.destroy()
+        self._creating = False
+        self._build()
+        self.refresh()
+        self._switch(active)
+        # Ajustar el botón de toggle
+        if new_theme == "light":
+            self._theme_btn.configure(
+                text="🌙  Modo Oscuro",
+                fg_color="#1A3EBB", hover_color="#2550D4")
+        else:
+            self._theme_btn.configure(
+                text="☀️  Modo Claro",
+                fg_color=ACCENT, hover_color=ACCH)
 
     # ── INICIO ────────────────────────────────────────────────────
     def _page_inicio(self):
