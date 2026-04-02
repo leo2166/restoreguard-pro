@@ -1,0 +1,48 @@
+[
+  {
+    "id": "20260402_102531",
+    "description": "RestoreGuard_MANUAL_20260402_102531",
+    "tipo": "MANUAL",
+    "fecha": "2026-04-02 10:25:59",
+    "estado": "✅ Éxito",
+    "carpeta": "C:\\Users\\Lucidio\\Documents\\crear punto\\respaldo_20260402_102531"
+  },
+  {
+    "id": "20260402_101918",
+    "description": "RestoreGuard_MANUAL_20260402_101918",
+    "tipo": "MANUAL",
+    "fecha": "2026-04-02 10:19:46",
+    "estado": "✅ Éxito",
+    "carpeta": "C:\\Users\\Lucidio\\Documents\\crear punto\\respaldo_20260402_101918"
+  },
+  {
+    "id": "20260402_100744",
+    "description": "RestoreGuard_MANUAL_20260402_100744",
+    "tipo": "MANUAL",
+    "fecha": "2026-04-02 10:07:59",
+    "estado": "✅ Éxito",
+    "carpeta": "C:\\Users\\Lucidio\\Documents\\crear punto\\respaldo_20260402_100744"
+  },
+  {
+    "id": "20260402_092013",
+    "description": "RestoreGuard_AUTO_PRUEBA_20260402_092013",
+    "tipo": "AUTO_PRUEBA",
+    "fecha": "2026-04-02 09:20:32",
+    "estado": "✅ Éxito",
+    "carpeta": "C:\\Users\\Lucidio\\Documents\\crear punto\\respaldo_20260402_092013"
+  },
+  {
+    "id": "20260401_214706",
+    "description": "RestoreGuard_MANUAL_20260401_214706",
+    "tipo": "MANUAL",
+    "fecha": "2026-04-01 21:47:08",
+    "estado": "✅ Éxito"
+  },
+  {
+    "id": "20260401_214647",
+    "description": "RestoreGuard_MANUAL_20260401_214647",
+    "tipo": "MANUAL",
+    "fecha": "2026-04-01 21:46:49",
+    "estado": "✅ Éxito"
+  }
+]

@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs y archivos de ejecución
+crash.log
+restore_log.txt
+
+# Directorios de respaldo local (son generados automáticamente)
+respaldo_*/
+network_backups/
+
+# Archivos de ícono generados
+_gen_icon.py
+
+# Archivos de prueba
+test_run.py
+check_points.py
