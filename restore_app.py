@@ -43,12 +43,9 @@ HAS_DRIVE_D  = _DRIVE_D.exists()
 BACKUP_D     = _DRIVE_D / APP_NAME if HAS_DRIVE_D else BASE_DIR / "respaldo_secundario"
 
 DEFAULT_CFG = {
-    "auto_time": "08:00",
-    "auto_enabled": True,
     "startup_enabled": False,
     "max_points": 5,
     "backup_path_d": str(BACKUP_D),
-    "create_on_startup": False,
 }
 
 # ─────────────────────────────────────────────────────────────────
@@ -177,13 +174,15 @@ def save_history(history):
 def run_ps(cmd, timeout=90):
     return subprocess.run(
         ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", cmd],
-        capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="ignore"
+        capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="ignore",
+        creationflags=subprocess.CREATE_NO_WINDOW
     )
 
 def run_cmd(args, timeout=30):
     return subprocess.run(
         args, capture_output=True, timeout=timeout,
-        encoding="cp850", errors="ignore"
+        encoding="cp850", errors="ignore",
+        creationflags=subprocess.CREATE_NO_WINDOW
     )
 
 # ─────────────────────────────────────────────────────────────────
@@ -449,7 +448,7 @@ class RestoreCreator:
             wdir.mkdir(exist_ok=True)
             subprocess.run(
                 ["netsh", "wlan", "export", "profile", f"folder={wdir}", "key=clear"],
-                capture_output=True, timeout=20
+                capture_output=True, timeout=20, creationflags=subprocess.CREATE_NO_WINDOW
             )
             r = run_cmd(["netsh", "wlan", "show", "profiles"])
             (wdir / "lista_redes.txt").write_text(r.stdout, encoding="utf-8", errors="ignore")
@@ -462,7 +461,7 @@ class RestoreCreator:
             out = d / "registro_tcpip.reg"
             subprocess.run(
                 ["reg", "export", key, str(out), "/y"],
-                capture_output=True, timeout=30
+                capture_output=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW
             )
             self._log(f"     → {out.name}")
 
@@ -473,7 +472,7 @@ class RestoreCreator:
             out = d / "registro_dns.reg"
             subprocess.run(
                 ["reg", "export", key, str(out), "/y"],
-                capture_output=True, timeout=30
+                capture_output=True, timeout=30, creationflags=subprocess.CREATE_NO_WINDOW
             )
             self._log(f"     → {out.name}")
 
@@ -544,16 +543,21 @@ class RestoreCreator:
 
         self._log(f"  🔍  Puntos anteriores encontrados: {len(data)}")
 
-        while len(data) >= self.max_pts:
+        if len(data) >= self.max_pts:
+            # Mostrar SOLO el punto más viejo que se va a borrar
             oldest = data[0]
-            seq = oldest.get("SequenceNumber", 0)
-            self._log(f"  🗑️  Eliminando punto antiguo #{seq}: {oldest.get('Description','')}")
-            run_ps(
-                f'$p = Get-WmiObject -Namespace root\\default -Class SystemRestore '
-                f'-Filter "SequenceNumber={seq}"; if ($p) {{ $p.Delete() }}',
-                timeout=30
-            )
-            data = data[1:]
+            seq_oldest = oldest.get("SequenceNumber", 0)
+            self._log(f"  🗑️  Eliminando punto más antiguo: {oldest.get('Description','')}")
+
+            # Borrar silenciosamente todos los excedentes (para garantizar el límite)
+            to_delete = data[:len(data) - self.max_pts + 1]  # los que sobran + 1 para dejar espacio al nuevo
+            for pt in to_delete:
+                seq = pt.get("SequenceNumber", 0)
+                run_ps(
+                    f'$p = Get-WmiObject -Namespace root\\default -Class SystemRestore '
+                    f'-Filter "SequenceNumber={seq}"; if ($p) {{ $p.Delete() }}',
+                    timeout=30
+                )
 
         # También limpiar respaldo antiguo en C: y D:
         self._cleanup_old_backups()
@@ -564,10 +568,13 @@ class RestoreCreator:
             subs = sorted([d for d in base.iterdir()
                            if d.is_dir() and d.name.startswith("respaldo_")],
                           key=lambda d: d.stat().st_mtime)
-            while len(subs) >= self.max_pts:
-                old = subs.pop(0)
-                shutil.rmtree(old, ignore_errors=True)
-                self._log(f"  🗑️  Respaldo antiguo eliminado en {label}: {old.name}")
+            if len(subs) >= self.max_pts:
+                # Mostrar SOLO el más viejo en la ventana
+                self._log(f"  🗑️  Respaldo antiguo eliminado en {label}: {subs[0].name}")
+                # Borrar silenciosamente todos los excedentes
+                to_del = subs[:len(subs) - self.max_pts + 1]
+                for old in to_del:
+                    shutil.rmtree(old, ignore_errors=True)
 
 # ─────────────────────────────────────────────────────────────────
 # SCHEDULER THREAD
@@ -704,7 +711,7 @@ class SystemRestorer:
         if wifi_dir.exists():
             count = 0
             for xml in wifi_dir.glob("*.xml"):
-                subprocess.run(["netsh", "wlan", "add", "profile", f"filename={xml}"], capture_output=True)
+                subprocess.run(["netsh", "wlan", "add", "profile", f"filename={xml}"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
                 count += 1
             self._log(f"  📡 Se restauraron {count} perfiles WiFi")
             
@@ -811,8 +818,6 @@ class App(ctk.CTk):
         self._build()
         self.refresh()
 
-        self.sched = SchedulerThread(lambda: self._bg_create("AUTO"))
-        self.sched.start()
 
         if TRAY_OK and PIL_OK:
             threading.Thread(target=self._start_tray, daemon=True).start()
@@ -820,8 +825,6 @@ class App(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
 
         cfg = load_config()
-        if cfg.get("create_on_startup", False):
-            threading.Timer(4.0, lambda: self._bg_create("AUTO")).start()
 
     # ── Construcción UI ───────────────────────────────────────────
     def _build(self):
@@ -965,13 +968,12 @@ class App(ctk.CTk):
         page.grid_rowconfigure(0, weight=1)
         sc.grid_columnconfigure(0, weight=1)
 
-        # Stat cards
+        # Stat cards (solo: Último Punto y Total Guardados)
         row0 = ctk.CTkFrame(sc, fg_color="transparent")
         row0.grid(row=0, column=0, sticky="ew", padx=20, pady=(20,10))
-        row0.grid_columnconfigure((0,1,2), weight=1)
+        row0.grid_columnconfigure((0,1), weight=1)
         self._s_last  = self._stat_card(row0,"🕐 Último Punto","—",TSEC,0)
-        self._s_next  = self._stat_card(row0,"⏰ Próximo Auto","—",WARN,1)
-        self._s_total = self._stat_card(row0,"🛡️ Total Guardados","—",ACCENT,2)
+        self._s_total = self._stat_card(row0,"🛡️ Total Guardados","—",ACCENT,1)
 
         # Botón crear
         bc = card(sc); bc.grid(row=1,column=0,sticky="ew",padx=20,pady=10)
@@ -1101,31 +1103,8 @@ class App(ctk.CTk):
 
         cfg = load_config()
 
-        s1 = card(sc); s1.grid(row=0,column=0,sticky="ew",padx=20,pady=(20,10))
-        s1.grid_columnconfigure(1, weight=1)
-        lbl(s1,"⏰ Programación Automática",13,"bold"
-            ).grid(row=0,column=0,columnspan=2,sticky="w",padx=20,pady=(16,8))
 
-        lbl(s1,"Activar puntos automáticos diarios:").grid(row=1,column=0,sticky="w",padx=20,pady=8)
-        self._sw_auto = ctk.CTkSwitch(s1, text="", progress_color=ACCENT, width=50)
-        self._sw_auto.grid(row=1,column=1,sticky="e",padx=20,pady=8)
-        if cfg.get("auto_enabled",True): self._sw_auto.select()
-
-        lbl(s1,"Hora del punto automático (HH:MM):").grid(row=2,column=0,sticky="w",padx=20,pady=8)
-        self._auto_time = tk.StringVar(value=cfg.get("auto_time","08:00"))
-        tf = ctk.CTkFrame(s1, fg_color="transparent")
-        tf.grid(row=2,column=1,sticky="e",padx=20,pady=8)
-        ctk.CTkEntry(tf,textvariable=self._auto_time,width=80,
-            font=ctk.CTkFont(size=13),justify="center").pack(side="left")
-        lbl(tf,"(HH:MM)",10,color=TSEC).pack(side="left",padx=6)
-
-        lbl(s1,"Crear punto al iniciar Windows:").grid(row=3,column=0,sticky="w",padx=20,pady=8)
-        self._sw_startup = ctk.CTkSwitch(s1, text="", progress_color=ACCENT, width=50)
-        self._sw_startup.grid(row=3,column=1,sticky="e",padx=20,pady=8)
-        if cfg.get("create_on_startup",False): self._sw_startup.select()
-        ctk.CTkLabel(s1,text="").grid(row=4,column=0,pady=4)
-
-        s2 = card(sc); s2.grid(row=1,column=0,sticky="ew",padx=20,pady=10)
+        s2 = card(sc); s2.grid(row=0,column=0,sticky="ew",padx=20,pady=(20,10))
         s2.grid_columnconfigure(1, weight=1)
         lbl(s2,"💾 Almacenamiento",13,"bold"
             ).grid(row=0,column=0,columnspan=2,sticky="w",padx=20,pady=(16,8))
@@ -1148,7 +1127,7 @@ class App(ctk.CTk):
             ).grid(row=2,column=1,sticky="ew",padx=20,pady=8)
         ctk.CTkLabel(s2,text="").grid(row=3,column=0,pady=4)
 
-        s3 = card(sc); s3.grid(row=2,column=0,sticky="ew",padx=20,pady=10)
+        s3 = card(sc); s3.grid(row=1,column=0,sticky="ew",padx=20,pady=10)
         s3.grid_columnconfigure(1, weight=1)
         lbl(s3,"🖥️ Sistema",13,"bold"
             ).grid(row=0,column=0,columnspan=2,sticky="w",padx=20,pady=(16,8))
@@ -1163,7 +1142,7 @@ class App(ctk.CTk):
             fg_color=SUCCESS,hover_color=SUCCH,
             height=48,corner_radius=10,
             command=self._save_cfg
-            ).grid(row=3,column=0,padx=20,pady=(10,30),sticky="ew")
+            ).grid(row=2,column=0,padx=20,pady=(10,30),sticky="ew")
 
         return page
 
@@ -1240,15 +1219,11 @@ class App(ctk.CTk):
 
     def _save_cfg(self):
         cfg = {
-            "auto_time":         self._auto_time.get(),
-            "auto_enabled":      bool(self._sw_auto.get()),
             "startup_enabled":   bool(self._sw_win.get()),
             "max_points":        int(self._max_var.get()),
             "backup_path_d":     self._d_path.get(),
-            "create_on_startup": bool(self._sw_startup.get()),
         }
         save_config(cfg)
-        self.sched.update(cfg["auto_time"])
         self._apply_startup(cfg["startup_enabled"])
         self.refresh()
         self._toast("✅ Configuración guardada")
@@ -1281,10 +1256,7 @@ class App(ctk.CTk):
             self._s_last.configure(text="Sin puntos aún", text_color=TSEC)
             self._s_total.configure(text="0 puntos", text_color=TSEC)
 
-        auto_en = cfg.get("auto_enabled", True)
-        self._s_next.configure(
-            text=f"Hoy {cfg.get('auto_time','08:00')}" if auto_en else "Desactivado",
-            text_color=WARN if auto_en else TSEC)
+
 
         for w in self._recent.winfo_children(): w.destroy()
         if not history:
